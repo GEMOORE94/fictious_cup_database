@@ -1,0 +1,388 @@
+CREATE DATABASE CUP_Project_FINAL_FINAL_FINAL;
+USE CUP_Project_FINAL_FINAL;
+​
+-- ITS ALL IN FINAL_FINAL SCHEMA --
+​
+CREATE TABLE patients_entry (
+    patient_id INT AUTO_INCREMENT PRIMARY KEY,
+    local_hospital_postcode VARCHAR(40),
+    first_name VARCHAR(40),
+    second_name VARCHAR(40) NOT NULL,
+    contact_telephone INT(11),
+    dob INT,
+    appointment DATE,
+    sex VARCHAR(3),
+    death VARCHAR (3)
+);
+ 
+ -- SOURCE OF DUMMY_DATASET: https://github.com/mahmoodlab/TOAD/tree/224d69d9aa316b17b84c445f9272222499ef252c --
+ -- Working with existing dataset and trying to find out information in order to bridge relationships with ficitious ideas --
+ALTER TABLE dummy_dataset MODIFY sex VARCHAR (3);
+​
+​
+ALTER TABLE dummy_dataset
+ADD FOREIGN KEY(sex)
+REFERENCES patient_entry(sex)
+ON DELETE SET NULL;
+​
+CREATE TABLE patient_characteristics (
+    patient_characteristics_id INT AUTO_INCREMENT PRIMARY KEY,
+	patient_id INT NOT NULL,
+    primary_or_emergency_presentation VARCHAR (100) NOT NULL,
+	questionaire_medical_background VARCHAR (40) NOT NULL,
+	diagnostic_method VARCHAR (40),
+    CONSTRAINT dataset_CUP
+    FOREIGN KEY (patient_id)
+	REFERENCES patients_entry (patient_id)
+		ON UPDATE CASCADE
+        ON DELETE CASCADE
+        );
+​
+​
+-- COMMENT: Populating these tables went wrong --
+​
+-- INSERT INTO patients_entry(local_hospital_postcode, first_name, second_name)
+-- VALUES
+	-- ('EH13EG', 'Jason', 'Harrison'),
+	-- ('EH13EG', 'Martin', 'Boyle'); --
+    
+    -- COMMENT: Failed to fix so used Workbench assistance --
+-- INSERT INTO patients_entry(contact_telephone, dob, appointment, sex, death)
+	-- VALUES 
+		-- ('07775664369', '16.06.1950', '12-12-2021', 'M', 'No'), -- 
+		-- ('01309384728', '15.05.1970', '5.06.2020', 'M', 'No'); --
+  -- FIX ABOVE --
+  
+    SELECT * FROM patients_entry;
+    
+    INSERT INTO patient_characteristics(
+	patient_id, primary_or_emergency_presentation, questionaire_medical_background)
+	VALUES 
+		('100435', 'emergency', 'not completed'),
+		('100383', 'emergency', 'completed');
+​
+SELECT * FROM patient_characteristics; 
+​
+-- Having ERROR code: 1364 --
+-- SHOW VARIABLES LIKE 'sql_mode'; -- 
+-- SET GLOBAL sql_mode=''; --
+-- Reset my database --
+-- SET FOREIGN_KEY_CHECKS=0; --
+​
+DROP TABLE patient_characteristics;
+​
+CREATE TABLE patient_characteristics (
+    patient_characteristics_id INT AUTO_INCREMENT PRIMARY KEY,
+	patient_id INT (5) NOT NULL,
+    primary_or_emergency_presentation VARCHAR (100) NOT NULL,
+	questionaire_medical_background VARCHAR (40) NOT NULL,
+	diagnostic_method VARCHAR (40),
+    CONSTRAINT dataset_CUP
+    FOREIGN KEY (patient_id)
+	REFERENCES patients_entry(patient_id)
+		ON UPDATE CASCADE
+        ON DELETE CASCADE
+        );
+​
+INSERT INTO patient_characteristics(
+	patient_id, primary_or_emergency_presentation, questionaire_medical_background)
+	VALUES 
+		('100435', 'emergency', 'not completed'),
+		('100383', 'emergency', 'completed'),
+        ('100443', 'primary', 'completed'),
+        ('100444', 'primary', 'completed');
+​
+SELECT * FROM patient_characteristics;
+​
+UPDATE patient_characteristics
+SET patient_id = 1000
+WHERE patient_id = 1;
+SELECT * FROM patient_characteristics;
+​
+SELECT * FROM patients_entry;
+DELETE FROM patients_entry
+WHERE patient_id = 2;
+​
+SELECT * FROM patients_entry;
+​
+SELECT * FROM patient_characteristics;
+​
+-- Create trigger --
+CREATE TABLE patients_entry_audit (
+    patient_id INT AUTO_INCREMENT PRIMARY KEY,
+    local_hospital_postcode VARCHAR(40),
+    first_name VARCHAR(40),
+    second_name VARCHAR(40) NOT NULL,
+    contact_telephone INT(11),
+    dob INT,
+    appointment DATE,
+    sex VARCHAR(3),
+    death VARCHAR (3),
+    action VARCHAR(50) DEFAULT NULL
+);
+​
+CREATE TRIGGER before_patients_entry_update
+	BEFORE UPDATE ON patients_entry
+	FOR EACH ROW
+INSERT INTO before_patients_entry_update
+SET action = 'update',
+	patient_id = OLD.patient_id,
+    local_hospital_postcode = OLD.local_hospital_postcode,
+    changedat = NOW();
+​
+SHOW TRIGGERS;
+-- Need to distable safe mode --
+UPDATE patients_entry
+	SET
+		second_name = 'Davis'
+	WHERE 
+		local_hospital_postcode = 'EH13EG';
+​
+SELECT * FROM patients_entry_audit;
+​
+-- Prepare an example query with group by --
+​
+SELECT
+	primary_or_emergency_presentation
+FROM 
+	patient_characteristics
+GROUP BY 
+	primary_or_emergency_presentation;
+    
+SELECT
+	primary_or_emergency_presentation, COUNT(*)
+FROM 
+	patient_characteristics
+GROUP BY 
+	primary_or_emergency_presentation;
+    
+​
+ALTER TABLE dummy_dataset
+ADD COLUMN doctor_id INT NOT NULL;
+​
+CREATE TABLE surgery_diagnostic_method (
+	method_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR (40) NOT NULL,
+    doctor_id INT NOT NULL, 
+    hospital_id INT,
+    surgery_date DATE,
+    staus TINYINT NOT NULL,
+    description TEXT,
+    CONSTRAINT SDM_category
+    FOREIGN KEY (doctor_id)
+    REFERENCES dummy_dataset(doctor_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+    );
+    
+    INSERT INTO surgery_diagnostic_method (
+	title)
+	VALUES 
+    ('autopsy'), 
+    ('cytology'),
+    ('histology'),
+    ('operation'), 
+    ('other');
+​
+DESCRIBE surgery_diagnostic_method;
+SELECT * FROM surgery_diagnostic_method;
+​
+CREATE TABLE post_method (
+			 post_method_id INT AUTO_INCREMENT PRIMARY KEY,
+             patient_id INT,
+			 doctor_id INT,
+             primary_site_identified BOOLEAN,
+             tumor_origins VARCHAR(50),
+             suspected_CUP BOOLEAN,
+             recommendations TEXT,
+             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+	
+	DESCRIBE TABLE post_method;
+    EXPLAIN TABLE post_method;
+    
+    INSERT INTO post_method (
+    tumor_origins) 
+    VALUES		
+				('Lung'), 
+                ('Breast'),
+                ('Colorectal'),
+                ('Ovarian'),
+                ('Pancreatobiliary'), 
+                ('Adrenal'), 
+                ('Skin'), 
+                ('Prostate'), 
+                ('Renal'),
+                ('Bladder'),
+                ('Esophagogastric'),
+                ('Thyroid'),
+                ('Head_Neck'),
+                ('Glioma'),
+                ('Germ_Cell'),
+                ('Endometrial'),
+                ('Cervix'),
+                ('Liver text');
+                
+​
+	CREATE TABLE IF NOT EXISTS checklists (
+    confirm_id INT AUTO_INCREMENT,
+    post_method_id INT,
+    post_method_confirm VARCHAR(255) NOT NULL,
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (confirm_id, post_method_id),
+    FOREIGN KEY (post_method_id)
+        REFERENCES post_method (post_method_id)
+        ON UPDATE RESTRICT 
+        ON DELETE CASCADE
+);
+	-- STUCK WITH FOREIGN KEY HERE BELOW NOT WORKING SO REMOVED --
+    CREATE TABLE doctors (
+    doctor_id INT AUTO_INCREMENT PRIMARY KEY,
+    employed_hospital_postcode VARCHAR (40),
+    first_name VARCHAR(40) NOT NULL,
+    second_name VARCHAR(40) NOT NULL,
+    dob DATE NOT NULL,
+    sex VARCHAR(3) NOT NULL
+	);
+​
+-- Insert into columns by name:
+INSERT INTO doctors (
+	doctor_id, employed_hospital_postcode, first_name, second_name, dob, sex)
+VALUES  ('5589503', 'EH13EG', 'Mark', 'Stares', STR_TO_DATE('07-25-1972','%m-%d-%Y'), 'M'),
+		('6589504', 'EH13EG', 'Karin', 'Purshouse', STR_TO_DATE('07-15-1972','%m-%d-%Y'), 'F'),
+        ('7535795', 'EH13EG', 'Gillian', 'Knowles', STR_TO_DATE('01-01-1985','%m-%d-%Y'), 'F'),
+		('7535875', 'EH13EG', 'Rachel', 'Haigh', STR_TO_DATE('09-09-1990','%m-%d-%Y'), 'F'),
+		('7535505', 'EH13EG', 'Colin', 'Barrie', STR_TO_DATE('11-12-1960','%m-%d-%Y'), 'M');
+  
+-- Comment: Cannot get this to work strangely --
+-- ALTER TABLE dummy_dataset
+-- ADD COLUMN dummy_id
+-- PRIMARY KEY NONCLUSTERED (dummy_id); --
+--    histologically_confirmed_CUP BOOLEAN,
+  --  favourable_CUP BOOLEAN,
+    -- confirmation_central_laboratory BOOLEAN,
+    -- primary_cancer_identified BOOLEAN
+   --  );
+​
+-- ALTER TABLE characteristics
+-- ADD PRIMARY KEY (patient_id);
+​
+-- Insert into columns by name --
+​
+INSERT INTO patient (
+	patient_id, local_hospital_postcode, first_name, second_name, contact_telephone, dob, appointment, sex, death)
+VALUES  ('1098537', 'EH13EG', 'Albert', 'Harrison', '01312480543', STR_TO_DATE('02-05-1968','%m-%d-%Y'), STR_TO_DATE('01-12-2022','%m-%d-%Y'), 'M', 'no'),
+		('1097436', 'EH13EG', 'Emma', 'Boyle', '0665443275', STR_TO_DATE('04-14-1967','%m-%d-%Y'), STR_TO_DATE('08-28-2021','%m-%d-%Y'), 'F', 'no'),
+        ('1097473', 'EH13EG', 'Roisin', 'Christie', '0436372676', STR_TO_DATE('07-10-1985','%m-%d-%Y'), STR_TO_DATE('02-14-2022','%m-%d-%Y'), 'F', 'yes'),
+		('1093644', 'EH13EG', 'Fred', 'Wilson', '0131222062', STR_TO_DATE('09-23-1950','%m-%d-%Y'), STR_TO_DATE('06-15-2021','%m-%d-%Y'), 'M', 'yes'),
+		('1097312', 'EH13EG', 'Colin', 'Barrie', '0131273014', STR_TO_DATE('11-12-1946','%m-%d-%Y'), STR_TO_DATE('12-7-2021','%m-%d-%Y'), 'M', 'no');
+INSERT INTO patient (
+patient_id, local_hospital_postcode, first_name, second_name, contact_telephone, dob, appointment, sex, death)
+VALUES	('1097479', 'EH13EG', 'James', 'Smith', '01774553676', STR_TO_DATE('10-09-1958','%m-%d-%Y'), STR_TO_DATE('01-16-2022','%m-%d-%Y'), 'M', 'no'),
+		('1098777', 'EH13EG', 'Kevin', 'Moore', '01318371646',  STR_TO_DATE('09-02-1970', '%m-%d-%Y'), STR_TO_DATE('09-02-2021','%m-%d-%Y'), 'M', 'no'),
+		('1094545', 'EH13EG', 'Rebecca', 'Barnely', '01391853746', STR_TO_DATE('04-14-1948','%m-%d-%Y'), STR_TO_DATE('08-20-2022','%m-%d-%Y'), 'F', 'yes'),
+		('1093814', 'EH13EG', 'Fred', 'Wilson', '0131222062', STR_TO_DATE('09-23-1950','%m-%d-%Y'), STR_TO_DATE('06-15-2022','%m-%d-%Y'), 'F', 'no'),
+		('1097300', 'EH13EG', 'William', 'Boyd', '0131273000', STR_TO_DATE('11-12-1946','%m-%d-%Y'), STR_TO_DATE('12-18-2022','%m-%d-%Y'), 'M', 'no');
+​
+CREATE TABLE patient_prospects (
+  prospects VARCHAR(100) PRIMARY KEY,
+  outlook VARCHAR(100)
+);
+​
+-- Based on biospy results --
+INSERT INTO patient_prospects VALUES
+('neuroendocrine carcinoma', 'Favourable-risk CUP'),
+('adenocarcinoma in the lymph nodes under the arm in women', 'Favourable-risk CUP'),
+('adenocarcinoma in the peritoneal cavity in women', 'Favourable-risk CUP'),
+('squamous cell carcinoma in the lymph nodes in the neck or in the groin', 'Favourable-risk CUP'),
+('poorly differentiated carcinoma in the middle (or midline) of the body', 'Favourable-risk CUP'),
+('CUP in a bone in men who have high prostate-specific antigen (PSA)' ,'Favourable-risk CUP'),
+('CUP of colorectal cancer type', 'Favourable-risk CUP'),
+('CUP that is only forming one metastasis', 'Favourable-risk CUP'),
+('adenocarcinoma in the liver and other organs', 'Poor prognosis within poor-risk CUP'),
+('adenocarcinoma cancer cells found in a buildup of fluid in the abdomen (called malignant ascites', 'Poor prognosis within poor-risk CUP'),
+('CUP in several different places in the brain', 'Poor prognosis within poor-risk CUP'),
+('CUP in several parts of the lungs or the lining of the lungs', 'Poor prognosis within poor-risk CUP'),
+('CUP in a bnone in men who do not have a high PSA level', 'Poor prognosis within poor-risk CUP');
+​
+-- Queries --
+​
+SELECT * FROM patient
+JOIN characteristics USING(patient_id);
+​
+SELECT
+  SUM(CASE WHEN sex = 'M' THEN 1 ELSE 0 END) as MaleCount,
+  SUM(CASE WHEN sex = 'F' THEN 1 ELSE 0 END) as FemaleCount,
+  COUNT(*) as TotalCount
+FROM dummy_dataset;
+​
+-- RESULTS: MaleCount: 1031, FemaleCount: 1011, TotalCount: 2042. --
+​
+-- Get the names of all patients born before 1990. --
+SELECT first_name, second_name
+FROM  patients_entry
+WHERE dob < '01.01.1961';    
+-- James Barrett --
+​
+-- Find the average age of a patient, grouped by patients --
+SELECT patient_id, AVG(dob)
+FROM patients_entry
+GROUP BY patient_id;
+​
+-- However, this does not produce the correct average... OH NO --
+​
+-- Subquery --
+SELECT * 
+FROM patient_prospects
+WHERE outlook IN (SELECT outlook
+FROM  patient_prospects 
+WHERE outlook = 'Poor prognosis within poor-risk CUP') 
+;
+​
+-- Joins --
+​
+SELECT post_method.suspected_CUP, post_method.recommendations, patient_prospects.outlook
+FROM post_method
+JOIN patient_prospects
+ON post_method.recommendations = patient_prospects.prospects;
+​
+-- Create stored function --
+DELIMITER $$
+CREATE FUNCTION eligbleforstudy(
+age INTEGER
+)
+RETURNS VARCHAR(20)
+DETERMINISTIC
+BEGIN
+IF age > 35 THEN
+RETURN ("yes");
+ELSE
+RETURN ("No");
+END IF;
+END$$
+DELIMITER ;
+​
+-- Creating a one-time event --
+CREATE TABLE messages (
+	id INT PRIMARY KEY AUTO_INCREMENT,
+	message VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL
+);
+​
+CREATE EVENT IF NOT EXISTS test_event_01
+ON SCHEDULE AT CURRENT_TIMESTAMP
+ON COMPLETION PRESERVE
+	DO
+INSERT INTO messages(message, created_at)
+VALUES('Test MySQL Event 1',NOW()); 
+​
+SELECT * FROM messages;
+SHOW EVENTS FROM CUP_Project_FINAL_FINAL;
+​
+ALTER TABLE doctors
+ADD COLUMN patient_id INT;
+​
+ALTER TABLE doctors
+ADD CONSTRAINT doctors_final
+FOREIGN KEY(patient_id)
+REFERENCES patients_entry (patient_id);
